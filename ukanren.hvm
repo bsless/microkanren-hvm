@@ -145,11 +145,8 @@ AnB =
 (Test 16 1) = (Car (Cdr ((AnB) EMPTY_STATE)))
 (Test 16 2) = (Cdr (Cdr ((AnB) EMPTY_STATE)))
 
-Five = (CallFresh @x(Eg x 5))
-Fives_ = @x(Disj (Eg x 5) (Zzz (Fives_ x)))
-// Fives = (CallFresh Fives_)
+(Fives x) = (Disj (Eg x 5) @ac(Delay ((Fives x) ac)))
 
-Fives = @x(Disj (Eg x 5) @ac(Zzz (((Fives) x) ac)))
-
-(Test 17 0) = (CallFresh @q((Fives) q) EMPTY_STATE)
-
+(Test 17 1) =
+    (let x = ((CallFresh @q(Fives q)) EMPTY_STATE)
+     (Take 1 x))
