@@ -1,0 +1,155 @@
+// Test driver
+(Main test n) = (Test test n)
+
+// Logic
+
+(If 1 t e) = t
+(If 0 t e) = e
+
+// List constructors
+
+(Car (Cons x y)) = x
+(Cdr (Cons x y)) = y
+
+(ListMatch NIL         nil f) = nil
+(ListMatch (Cons x xs) nil f) = (f x xs)
+
+(AlistMatch NIL nil f) = nil
+(AlistMatch (Cons (Cons k v) xs) nil f) = (f k v xs)
+
+(AlistGet alist pred) =
+    (AlistMatch alist
+     NIL
+     @k@v@xs (If (pred k) v (AlistGet xs pred)))
+
+(SomeMatch NIL nil f) = nil
+(SomeMatch x nil f) = (f x)
+
+NumbersAlist = (Cons (Cons 1 2) (Cons (Cons 3 4) (Cons (Cons 5 6) NIL)))
+(Test 0 n) = (AlistGet NumbersAlist @v(== n v))
+
+(VarEq (Var x) (Var y)) = (== x y)
+
+LvarAlist = (Cons (Cons (Var 1) 2) (Cons (Cons (Var 3) 4) (Cons (Cons (Var 5) 6) NIL)))
+(Test 1 n) = (AlistGet LvarAlist @v(VarEq (Var n) v))
+
+// Substitution lookup
+
+(Walk (Var u) s) =
+  let found = (AlistGet s @v(VarEq (Var u) v))
+  (Walk. (Var u) found s)
+  (Walk. u NIL s) = u
+  (Walk. u v s) = (Walk v s)
+(Walk u s) = u
+
+SubAlist = (Cons (Cons (Var 1) (Var 3)) (Cons (Cons (Var 3) 4) (Cons (Cons (Var 5) 6) NIL)))
+
+(Test 2 n) = (AlistGet SubAlist @v(VarEq (Var n) v))
+
+// n == 1 should return 4
+(Test 3 n) = (Walk (Var n) SubAlist)
+
+// Extend substitution
+
+(ExtS x v s) = (Cons (Cons x v) s)
+
+// Unification
+
+(Unify u v s) =
+  (Un (Walk u s) (Walk v s) s)
+
+  (Un (Var u) (Var v) s) = (If (== u v) s NIL)
+  (Un u (Var v) s) = (ExtS (Var v) u s)
+  (Un (Var u) v s) = (ExtS (Var u) v s)
+  (Un (Cons u1 u2) (Cons v1 v2) s) =
+      (Unify u2 v2 (Unify u1 u2 s))
+  (Un u v s) = (If (== u v) s NIL)
+
+// primitive unification
+(Test 4 n) = (Un n 1 3)
+
+(Test 5 n) = (Unify (Var 1) n NIL)
+(Test 6 n) = (Unify n (Var 1) NIL)
+(Test 7 n) = (Unify n (Var 1) SubAlist)
+
+(Eg u v) = @sc(Eg. sc (Unify u v (Car sc)))
+(Eg. sc NIL) = MZERO
+(Eg. sc s) = (Unit (Cons s (Cdr sc)))
+
+(Unit sc) = (Cons sc MZERO)
+MZERO = NIL
+
+//
+
+EMPTY_STATE = (Cons NIL 0)
+
+(CallFresh f) = @sc(CallFresh. f sc)
+(CallFresh. f (Cons s c)) = ((f (Var c)) (Cons s (+ c 1)))
+
+(Test 8 n) = (Car ((CallFresh @q(Eg q 5)) EMPTY_STATE))
+(Test 9 n) = (Cdr ((CallFresh @q(Eg q 5)) EMPTY_STATE))
+
+// Logic Monad
+
+(Mplus (Cons x xs) g) = (Cons x (Mplus xs g))
+(Mplus (Delay g1) g2) = (Delay (Mplus g2 g1))
+(Mplus NIL g) = g
+
+(Test 100 1) = (Mplus NIL 1)
+(Test 101 1) = (Mplus (Cons 1 NIL) S)
+(Test 102 1) = (Mplus (Cons (Cons 1 2) (Cons (Cons 3 4) NIL)) S)
+(Test 103 1) = (Mplus (Cons 1 2) NIL)
+
+(Bind NIL g) = MZERO
+(Bind (Cons x xs) g) = (Mplus (g x) (Bind xs g))
+(Bind (Delay body) g) = (Delay (Bind body g))
+
+// uK ---
+
+(Disj g h) = @sc(Mplus (g sc) (h sc))
+(Conj g h) = @sc(Bind (g sc) h)
+(Zzz g) = @sc(Delay (g sc))
+
+A = (CallFresh @x(Eg x 7))
+
+(Test 10 n) =
+    let a = A
+    (Car (a EMPTY_STATE))
+
+B = (CallFresh @b(Disj (Eg b 5) (Eg b 6)))
+(Test 11 n) = let b = B (Car (b EMPTY_STATE))
+
+AnB =
+    let a = A
+    let b = B
+    (Conj a b)
+
+(Test 12 n) = (Car ((AnB) EMPTY_STATE))
+
+(Pull (Delay xs)) = (Pull xs)
+(Pull x) = x
+
+(Test 13 1) = (Pull (Delay (Delay 1)))
+
+(Take 0 f) = NIL
+(Take n x) =
+  let xs = (Pull x)
+  (Take. n xs)
+  (Take. n NIL) = NIL
+  (Take. n (Cons x xs)) = (Cons x (Take (- n 1) xs))
+
+(Test 14 n) = (Take n (Delay (Delay (Cons 1 (Delay (Cons 2 NIL))))))
+
+(Test 15 1) = (Take 1 ((AnB) EMPTY_STATE))
+
+(Test 16 1) = (Car (Cdr ((AnB) EMPTY_STATE)))
+(Test 16 2) = (Cdr (Cdr ((AnB) EMPTY_STATE)))
+
+Five = (CallFresh @x(Eg x 5))
+Fives_ = @x(Disj (Eg x 5) (Zzz (Fives_ x)))
+// Fives = (CallFresh Fives_)
+
+Fives = @x(Disj (Eg x 5) @ac(Zzz (((Fives) x) ac)))
+
+(Test 17 0) = (CallFresh @q((Fives) q) EMPTY_STATE)
+
