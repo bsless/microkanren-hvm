@@ -150,3 +150,23 @@ AnB =
 (Test 17 1) =
     (let x = ((CallFresh @q(Fives q)) EMPTY_STATE)
      (Take 1 x))
+
+(Test 18 n) = (Take n ((AnB) EMPTY_STATE))
+
+(Conde (Cons gs es)) = (DisjL (ConjL gs) (Conde es))
+(Conde NIL) = NIL
+
+(DisjL (Cons g gs)) = (DisjL (Zzz g) (DisjL gs))
+(DisjL (Cons g NIL)) = (Zzz g)
+
+(ConjL (Cons g gs)) = (ConjL (Zzz g) (ConjL gs))
+(ConjL (Cons g NIL)) = (Zzz g)
+
+// This doesn't work
+
+(Fresh NIL gs) = (ConjL gs)
+(Fresh (Cons x xs) gs) =
+    (CallFresh @x(Fresh xs gs))
+
+(Test 19 n) = (Fresh (Cons (Lvar 1) NIL) (Cons (Eg (Lvar 1) 1)))
+// (Test 19 n) = (Take n (Fresh (Cons (Lvar 1) NIL) (Cons (Eg (Lvar 1) 1))))
