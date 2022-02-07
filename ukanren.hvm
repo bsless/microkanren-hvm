@@ -168,5 +168,5 @@ AnB =
 (Fresh (Cons x xs) gs) =
     (CallFresh @x(Fresh xs gs))
 
-(Test 19 n) = (Fresh (Cons (Lvar 1) NIL) (Cons (Eg (Lvar 1) 1)))
+(Test 19 n) = (Take n (Fresh (Cons x NIL) (Cons (Eg x 1) NIL)))
 // (Test 19 n) = (Take n (Fresh (Cons (Lvar 1) NIL) (Cons (Eg (Lvar 1) 1))))
